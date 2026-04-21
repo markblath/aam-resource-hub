@@ -30,21 +30,27 @@ export default async function handler(req, res) {
     if (!tokenRes.ok) throw new Error("Token fetch failed");
     const { access_token } = await tokenRes.json();
 
-    // 2. Fetch active members
+    // 2. Fetch all active members — WA caps at 100 per page, so paginate
     const accountId = process.env.WILD_APRICOT_ACCOUNT_ID;
-    const contactsRes = await fetch(
-      `https://api.wildapricot.org/v2.3/accounts/${accountId}/contacts` +
-        `?$filter=Status%20eq%20'Active'&$top=500&$async=false`,
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-          Accept: "application/json",
-        },
-      }
-    );
+    const baseUrl = `https://api.wildapricot.org/v2.3/accounts/${accountId}/contacts`;
+    const headers = { Authorization: `Bearer ${access_token}`, Accept: "application/json" };
 
-    if (!contactsRes.ok) throw new Error("Contacts fetch failed");
-    const data = await contactsRes.json();
+    let allContacts = [];
+    let skip = 0;
+    const pageSize = 100;
+
+    while (true) {
+      const url = `${baseUrl}?$filter=Status%20eq%20'Active'&$top=${pageSize}&$skip=${skip}&$async=false`;
+      const contactsRes = await fetch(url, { headers });
+      if (!contactsRes.ok) throw new Error("Contacts fetch failed");
+      const data = await contactsRes.json();
+      const page = data.Contacts || [];
+      allContacts = allContacts.concat(page);
+      if (page.length < pageSize) break;
+      skip += pageSize;
+    }
+
+    const data = { Contacts: allContacts };
 
     // 3. Filter to paying members only and map to directory format
     const members = (data.Contacts || [])

@@ -450,8 +450,12 @@ function MemberCard({ member, onOpen }) {
         <Tag>{member.level}</Tag>
         <Tag muted>{member.city}, {member.state}</Tag>
       </div>
-      <div style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#F95B4A", marginBottom: 6 }}>Artists</div>
-      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13.5, color: "#1A1A1A", lineHeight: 1.45 }}>{member.artists.join(" · ")}</div>
+      {member.artists && member.artists.length > 0 && (
+        <>
+          <div style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#F95B4A", marginBottom: 6 }}>Artists</div>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13.5, color: "#1A1A1A", lineHeight: 1.45 }}>{member.artists.join(" · ")}</div>
+        </>
+      )}
     </article>
   );
 }
