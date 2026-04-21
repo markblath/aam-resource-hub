@@ -171,7 +171,7 @@ const NAV_SECTIONS = [
   { id: "events",     label: "Events" },
 ];
 
-function Header({ section, setSection }) {
+function Header({ section, setSection, user, onLogout }) {
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 50, background: "#1A1A1A", color: "#FFFFFF", borderBottom: "1px solid #000" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
@@ -191,10 +191,25 @@ function Header({ section, setSection }) {
             );
           })}
         </nav>
-        <a href="https://www.aam.org.au" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 999, background: "#C8F035", color: "#1A1A1A", fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", textDecoration: "none", transition: "transform 120ms ease", whiteSpace: "nowrap" }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-1px)"}
-        onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
-        >aam.org.au <span style={{ fontSize: 14 }}>→</span></a>
+        {user ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px 6px 6px", borderRadius: 999, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
+              <div style={{ width: 28, height: 28, borderRadius: 999, background: "#C8F035", display: "grid", placeItems: "center", fontFamily: "'Work Sans', sans-serif", fontWeight: 800, fontSize: 11, color: "#1A1A1A", flexShrink: 0 }}>
+                {user.name ? user.name.split(" ").map((n) => n[0]).join("").slice(0,2).toUpperCase() : "M"}
+              </div>
+              <span style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 600, fontSize: 12, color: "rgba(255,255,255,0.85)", whiteSpace: "nowrap" }}>{user.name || user.email}</span>
+            </div>
+            <button onClick={onLogout} style={{ padding: "8px 14px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.18)", background: "transparent", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "#FFFFFF"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "rgba(255,255,255,0.6)"}
+            >Sign out</button>
+          </div>
+        ) : (
+          <a href="/api/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 999, background: "#C8F035", color: "#1A1A1A", fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", textDecoration: "none", transition: "transform 120ms ease", whiteSpace: "nowrap" }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-1px)"}
+          onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
+          >Sign in <span style={{ fontSize: 14 }}>→</span></a>
+        )}
       </div>
     </header>
   );
@@ -805,6 +820,30 @@ Object.assign(window, { DirectorySection, AdvocacySection, ProgramsSection, Even
 <script type="text/babel">
 const { useState: useStateApp, useEffect: useEffectApp, useMemo: useMemoApp } = React;
 
+function LoginGate({ authError }) {
+  return (
+    <div style={{ minHeight: "100vh", background: "#1A1A1A", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <div style={{ maxWidth: 440, width: "100%", textAlign: "center" }}>
+        <div style={{ marginBottom: 36, display: "flex", justifyContent: "center" }}><AAMLogo inverted /></div>
+        <h1 style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 800, fontSize: "clamp(52px,10vw,72px)", lineHeight: 0.88, letterSpacing: "-0.04em", color: "#C8F035", margin: "0 0 20px" }}>Member<br />Hub.</h1>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, color: "rgba(255,255,255,0.65)", margin: "0 0 36px", lineHeight: 1.55 }}>This area is for AAM members only.<br />Sign in with your Wild Apricot account to continue.</p>
+        {authError === "not-member" && (
+          <div style={{ background: "rgba(249,91,74,0.12)", border: "1px solid #F95B4A", borderRadius: 10, padding: "12px 18px", marginBottom: 24, color: "#F95B4A", fontFamily: "'Inter', sans-serif", fontSize: 14, lineHeight: 1.45 }}>
+            Your account isn't linked to an AAM membership. <a href="https://www.aam.org.au/membership" style={{ color: "#F95B4A", fontWeight: 700 }}>Join AAM →</a>
+          </div>
+        )}
+        {(authError === "error" || authError === "denied") && (
+          <div style={{ background: "rgba(249,91,74,0.12)", border: "1px solid #F95B4A", borderRadius: 10, padding: "12px 18px", marginBottom: 24, color: "#F95B4A", fontFamily: "'Inter', sans-serif", fontSize: 14, lineHeight: 1.45 }}>
+            Something went wrong. Please try again.
+          </div>
+        )}
+        <a href="/api/login" style={{ display: "inline-block", padding: "16px 36px", borderRadius: 999, background: "#C8F035", color: "#1A1A1A", fontFamily: "'Work Sans', sans-serif", fontWeight: 800, fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", textDecoration: "none" }}>Sign in with Wild Apricot →</a>
+        <p style={{ marginTop: 24, fontFamily: "'Inter', sans-serif", fontSize: 13, color: "rgba(255,255,255,0.3)" }}>Not a member? <a href="https://www.aam.org.au/membership" style={{ color: "rgba(255,255,255,0.45)" }}>Learn more about joining AAM</a></p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [section, setSection] = useStateApp(() => {
     try { return localStorage.getItem("aam-section") || "resources"; } catch { return "resources"; }
@@ -813,6 +852,23 @@ function App() {
   const [activeCategory, setActiveCategory] = useStateApp("All");
   const [activeFormat, setActiveFormat] = useStateApp("All formats");
   const [heroVariant] = useStateApp("marquee");
+  const [user, setUser] = useStateApp(null);
+  const [authError, setAuthError] = useStateApp(null);
+
+  useEffectApp(() => {
+    const params = new URLSearchParams(window.location.search);
+    const auth = params.get("auth");
+    if (auth) window.history.replaceState({}, "", "/");
+    if (auth === "not-member" || auth === "error" || auth === "denied") {
+      setAuthError(auth);
+      setUser(false);
+      return;
+    }
+    fetch("/api/session")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => setUser(data && data.authenticated ? data : false))
+      .catch(() => setUser(false));
+  }, []);
 
   useEffectApp(() => {
     try { localStorage.setItem("aam-section", section); } catch {}
@@ -830,6 +886,19 @@ function App() {
 
   const clearFilters = () => { setQuery(""); setActiveCategory("All"); setActiveFormat("All formats"); };
 
+  if (user === null) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#1A1A1A", display: "grid", placeItems: "center" }}>
+        <div style={{ width: 32, height: 32, borderRadius: 999, border: "3px solid #C8F035", borderTopColor: "transparent", animation: "aam-spin 0.7s linear infinite" }} />
+        <style>{`@keyframes aam-spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (!user) return <LoginGate authError={authError} />;
+
+  const onLogout = () => { window.location.href = "/api/logout"; };
+
   return (
     <div style={{ minHeight: "100vh", background: "#F7F7F5", color: "#1A1A1A" }}>
       <style>{`
@@ -845,7 +914,7 @@ function App() {
         button:focus-visible, input:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid #1A1A1A; outline-offset: 2px; }
       `}</style>
 
-      <Header section={section} setSection={setSection} />
+      <Header section={section} setSection={setSection} user={user} onLogout={onLogout} />
       <Hero heroVariant={heroVariant} section={section} />
 
       {section === "resources" && (
