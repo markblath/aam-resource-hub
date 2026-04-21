@@ -403,7 +403,7 @@ Object.assign(window, { Header, Hero, FilterBar, ResourceCard, ResourceGrid, Foo
 
 <!-- ── SECTION COMPONENTS ─────────────────────────────────────────────── -->
 <script type="text/babel">
-const { useState: useStateS, useMemo: useMemoS } = React;
+const { useState: useStateS, useMemo: useMemoS, useEffect: useEffectS } = React;
 
 // ── Shared helpers ──────────────────────────────────────────────────────
 function Tag({ children, muted, dark }) {
@@ -474,26 +474,36 @@ function MemberSheet({ member, onClose, onMessage }) {
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", rowGap: 14, columnGap: 16, padding: "20px 0", borderTop: "1px solid #E6E6E1", borderBottom: "1px solid #E6E6E1" }}>
-            {[["Membership", <Tag dark>{member.level}</Tag>], ["First name", member.firstName], ["Last name", member.lastName], ["Email", <a href={`mailto:${member.email}`} style={{ color: "#1A1A1A", textDecoration: "underline" }}>{member.email}</a>], ["Organisation", member.org], ["Location", `${member.city}, ${member.state}`]].map(([label, val]) => (
+            {[
+              ["Membership", <Tag dark>{member.level}</Tag>],
+              ["First name", member.firstName],
+              ["Last name", member.lastName],
+              member.email ? ["Email", <a href={`mailto:${member.email}`} style={{ color: "#1A1A1A", textDecoration: "underline" }}>{member.email}</a>] : null,
+              member.phone ? ["Phone", member.phone] : null,
+              member.org   ? ["Organisation", member.org] : null,
+              (member.city || member.state) ? ["Location", [member.city, member.state].filter(Boolean).join(", ")] : null,
+            ].filter(Boolean).map(([label, val]) => (
               <React.Fragment key={label}>
                 <div style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8A8A82", paddingTop: 3 }}>{label}</div>
                 <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14.5, color: "#1A1A1A" }}>{val}</div>
               </React.Fragment>
             ))}
           </div>
-          <div style={{ paddingTop: 22 }}>
-            <div style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#F95B4A", marginBottom: 12 }}>Artists Represented</div>
-            {member.artists.map((a, i) => (
-              <div key={a} style={{ padding: "12px 0", borderBottom: i < member.artists.length - 1 ? "1px solid #EEEEE9" : "none", display: "flex", alignItems: "center", gap: 14 }}>
-                <span style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 800, fontSize: 13, color: "#8A8A82", minWidth: 28 }}>0{i+1}</span>
-                <span style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 17, color: "#1A1A1A", letterSpacing: "-0.01em" }}>{a}</span>
-              </div>
-            ))}
-          </div>
+          {member.artists && member.artists.length > 0 && (
+            <div style={{ paddingTop: 22 }}>
+              <div style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#F95B4A", marginBottom: 12 }}>Artists Represented</div>
+              {member.artists.map((a, i) => (
+                <div key={a} style={{ padding: "12px 0", borderBottom: i < member.artists.length - 1 ? "1px solid #EEEEE9" : "none", display: "flex", alignItems: "center", gap: 14 }}>
+                  <span style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 800, fontSize: 13, color: "#8A8A82", minWidth: 28 }}>0{i+1}</span>
+                  <span style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700, fontSize: 17, color: "#1A1A1A", letterSpacing: "-0.01em" }}>{a}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ padding: "16px 24px", borderTop: "1px solid #E6E6E1", background: "#F7F7F5", display: "flex", gap: 10 }}>
           <button onClick={onClose} style={btnGhost()}>Close</button>
-          <button onClick={onMessage} style={btnPrimary()}>Send a message <span style={{ fontSize: 13 }}>→</span></button>
+          {member.email && <button onClick={onMessage} style={btnPrimary()}>Send a message <span style={{ fontSize: 13 }}>→</span></button>}
         </div>
       </div>
     </>
@@ -550,16 +560,47 @@ function DirectorySection() {
   const [level, setLevel] = useStateS("All");
   const [selected, setSelected] = useStateS(null);
   const [composeOpen, setComposeOpen] = useStateS(false);
+  const [members, setMembers] = useStateS(null);
+  const [loadError, setLoadError] = useStateS(false);
   const states = ["All","NSW","VIC","QLD","WA","SA","TAS","ACT","NT"];
-  const levels = ["All","Full","Associate"];
+  const levels = ["All","Full Member","Associate Member"];
+
+  useEffectS(() => {
+    fetch("/api/members")
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((data) => setMembers(data.members || []))
+      .catch(() => setLoadError(true));
+  }, []);
+
   const filtered = useMemoS(() => {
-    let list = window.MEMBERS;
+    if (!members) return [];
+    let list = members;
     if (state !== "All") list = list.filter((m) => m.state === state);
     if (level !== "All") list = list.filter((m) => m.level === level);
     const query = q.trim().toLowerCase();
-    if (query) list = list.filter((m) => (m.firstName+" "+m.lastName).toLowerCase().includes(query) || m.org.toLowerCase().includes(query) || m.artists.some((a) => a.toLowerCase().includes(query)) || m.city.toLowerCase().includes(query));
+    if (query) list = list.filter((m) =>
+      (m.firstName + " " + m.lastName).toLowerCase().includes(query) ||
+      (m.org || "").toLowerCase().includes(query) ||
+      (m.artists || []).some((a) => a.toLowerCase().includes(query)) ||
+      (m.city || "").toLowerCase().includes(query)
+    );
     return list;
-  }, [q, state, level]);
+  }, [q, state, level, members]);
+
+  if (loadError) return (
+    <div style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 32px", textAlign: "center", fontFamily: "'Inter', sans-serif", color: "#6B6B66" }}>
+      Could not load member directory. Please try refreshing the page.
+    </div>
+  );
+
+  if (!members) return (
+    <div style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+      <style>{`@keyframes aam-spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ width: 32, height: 32, borderRadius: 999, border: "3px solid #C8F035", borderTopColor: "transparent", animation: "aam-spin 0.7s linear infinite" }}/>
+      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: "#8A8A82" }}>Loading member directory…</div>
+    </div>
+  );
+
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px" }}>
       <div style={{ background: "#FFFFFF", border: "1px solid #E6E6E1", borderRadius: 14, padding: "16px 18px", marginTop: -32, marginBottom: 24, position: "relative", zIndex: 2, boxShadow: "0 8px 24px -16px rgba(26,26,26,0.12)", display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr auto", gap: 12, alignItems: "center" }}>
@@ -573,8 +614,8 @@ function DirectorySection() {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, padding: "10px 14px", background: "rgba(200,240,53,0.25)", border: "1px solid #C8F035", borderRadius: 10, fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#1A1A1A" }}>
         <span style={{ width: 8, height: 8, borderRadius: 999, background: "#1A1A1A" }}/>
-        <strong style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700 }}>Live from CRM</strong>
-        <span style={{ opacity: 0.7 }}>— only currently-active members are shown. Data synced from Wild Apricot.</span>
+        <strong style={{ fontFamily: "'Work Sans', sans-serif", fontWeight: 700 }}>Live from Wild Apricot</strong>
+        <span style={{ opacity: 0.7 }}>— only currently-active members are shown.</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, paddingBottom: 96 }}>
         {filtered.map((m) => <MemberCard key={m.id} member={m} onOpen={() => setSelected(m)}/>)}
