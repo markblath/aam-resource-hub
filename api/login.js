@@ -7,5 +7,5 @@ export default function handler(req, res) {
     scope: "auto",
   });
 
-  res.redirect(302, `https://oauth.wildapricot.org/authorize?${params}`);
+  res.redirect(302, `https://AAMMembers.wildapricot.org/sys/login/OAuthLogin?${params}`);
 }
