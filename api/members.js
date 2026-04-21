@@ -76,7 +76,7 @@ export default async function handler(req, res) {
           lastName,
           org:       c.Organization || fields["Organization"] || "",
           city:      fields["City"]  || "",
-          state:     fields["State"] || "",
+          state:     fields["State"]?.Label || fields["State"] || "",
           email:     showEmail ? (c.Email || null) : null,
           phone:     showPhone ? (fields["Phone"] || fields["Mobile phone"] || null) : null,
           artists,

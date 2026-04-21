@@ -562,8 +562,12 @@ function DirectorySection() {
   const [composeOpen, setComposeOpen] = useStateS(false);
   const [members, setMembers] = useStateS(null);
   const [loadError, setLoadError] = useStateS(false);
-  const states = ["All","NSW","VIC","QLD","WA","SA","TAS","ACT","NT"];
-  const levels = ["All","Full Member","Associate Member"];
+  const states = ["All","NSW","VIC","QLD","WA","SA","TAS","ACT","NT","Other - Overseas"];
+  const levels = useMemoS(() => {
+    if (!members) return ["All"];
+    const unique = [...new Set(members.map((m) => m.level))].sort();
+    return ["All", ...unique];
+  }, [members]);
 
   useEffectS(() => {
     fetch("/api/members")
